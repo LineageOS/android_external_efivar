@@ -1,0 +1,113 @@
+//
+// Copyright (C) 2023 The LineageOS Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+cc_binary_host {
+    name: "makeguids",
+    local_include_dirs: ["include"],
+    cflags: ["-DEFIVAR_BUILD_ENVIRONMENT"],
+    srcs: [
+        "guid.c",
+        "makeguids.c",
+    ],
+}
+
+genrule {
+    name: "efivargen_sources",
+    out: ["guid-symbols.c"],
+    srcs: ["guids.txt"],
+    tools: ["makeguids"],
+    cmd: "$(location makeguids) $(in) $(genDir)/guids.bin $(genDir)/names.bin $(out) $(genDir)/efivar-guids.h",
+}
+
+genrule {
+    name: "efivargen_headers",
+    out: ["external/efivar/src/include/efivar/efivar-guids.h", "external/efivar/src/include/names.bin", "external/efivar/src/include/guids.bin"],
+    srcs: ["guids.txt"],
+    tools: ["makeguids"],
+    cmd: "$(location makeguids) $(in) $(genDir)/external/efivar/src/include/guids.bin $(genDir)/external/efivar/src/include/names.bin $(genDir)/guid-symbols.c $(genDir)/external/efivar/src/include/efivar/efivar-guids.h",
+    export_include_dirs: [ "include", ],
+}
+
+filegroup {
+    name: "libefiboot_sources",
+    srcs: [
+        "crc32.c",
+        "creator.c",
+        "disk.c",
+        "gpt.c",
+        "loadopt.c",
+        "path-helpers.c",
+        "linux-acpi-root.c",
+        "linux-acpi.c",
+        "linux-ata.c",
+        "linux-emmc.c",
+        "linux-i2o.c",
+        "linux-md.c",
+        "linux-nvme.c",
+        "linux-pci-root.c",
+        "linux-pci.c",
+        "linux-pmem.c",
+        "linux-sas.c",
+        "linux-sata.c",
+        "linux-scsi.c",
+        "linux-soc-root.c",
+        "linux-virtblk.c",
+        "linux.c",
+    ],
+}
+
+filegroup {
+    name: "libefivar_sources",
+    srcs: [
+        "dp.c",
+        "dp-acpi.c",
+        "dp-hw.c",
+        "dp-media.c",
+        "dp-message.c",
+        "efivarfs.c",
+        "error.c",
+        "export.c",
+        "guid.c",
+        "guids.S",
+        "lib.c",
+        "vars.c",
+    ],
+}
+
+cc_library {
+    name: "libefivar",
+    vendor: true,
+    recovery_available: true,
+
+    cflags: [
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-std=gnu11",
+        "-Wno-error=typedef-redefinition"
+    ],
+
+    srcs: [
+        ":libefiboot_sources",
+        ":libefivar_sources",
+    ],
+
+    generated_sources: ["efivargen_sources"],
+    generated_headers: ["efivargen_headers"],
+    export_generated_headers: ["efivargen_headers"],
+    local_include_dirs: ["include"],
+    export_include_dirs: ["include",],
+    version_script: "libefivar.map.in",
+}
