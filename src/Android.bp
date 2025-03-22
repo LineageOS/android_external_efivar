@@ -89,6 +89,7 @@ filegroup {
 
 cc_library {
     name: "libefivar",
+    product_available: true,
     vendor_available: true,
     recovery_available: true,
 
